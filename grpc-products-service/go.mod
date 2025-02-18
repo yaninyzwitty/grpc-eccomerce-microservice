@@ -3,8 +3,10 @@ module github.com/grpc-products-service
 go 1.23.4
 
 require (
+	github.com/sony/sonyflake v1.2.0
 	google.golang.org/grpc v1.70.0
 	google.golang.org/protobuf v1.36.5
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
