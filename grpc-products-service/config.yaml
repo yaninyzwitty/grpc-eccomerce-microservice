@@ -1,2 +1,6 @@
 server:
   port: 50051
+astra:
+  username: "some_username"
+  path: ./path
+  timeout: 30
