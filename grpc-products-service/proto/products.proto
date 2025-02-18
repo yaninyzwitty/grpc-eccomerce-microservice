@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+option go_package = "/pb";
+
+import "google/protobuf/timestamp.proto";
+
+package products;
+
+service ProductService {
+  rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+  rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
+  rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
+}
+
+message Product {
+  int64 id = 1;
+  string name = 2;
+  string description = 3;
+  float price = 4;
+  string category = 5;
+  repeated string tags = 6;
+  int32 stock_count = 7;  // Added stock count
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+
+
+message CreateProductRequest {
+  string name = 1;
+  string description = 2;
+  float price = 3;
+  string category = 4;
+  repeated string tags = 5;
+
+}
+
+message CreateProductResponse {
+  Product product = 1;
+}
+
+message GetProductRequest {
+  int64 id = 1;
+}
+
+message GetProductResponse {
+  Product product = 1;
+}
+
+message ListProductsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  string filter = 3;
+}
+
+message ListProductsResponse {
+  repeated Product products = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message UpdateProductRequest {
+  int64 id = 1;
+  string name = 2;
+  string description = 3;
+  float price = 4;
+  string category = 5;
+  repeated string tags = 6;
+  int32 stock_count = 7;  // Added stock count
+}
+
+
+
+message UpdateProductResponse {
+  Product product = 1;
+}
+
+message DeleteProductRequest {
+  int64 id = 1;
+}
+
+message DeleteProductResponse {
+  bool success = 1;
+}
