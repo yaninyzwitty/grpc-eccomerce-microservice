@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/grpc-products-service/internal/database"
 	"github.com/grpc-products-service/pkg"
@@ -13,6 +15,8 @@ import (
 
 func main() {
 	var cfg pkg.Config
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	file, err := os.Open("config.yaml")
 	if err != nil {
 		slog.Error("failed to open config.yaml", "error", err)
@@ -36,10 +40,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	astraConfig := database.AstraConfig{
+	astraConfig := &database.AstraConfig{
 		Username: cfg.Database.Username,
 		Path:     cfg.Database.Path,
 		Token:    helpers.GetEnvOrDefault("ASTRA_TOKEN", ""),
 	}
+
+	db := database.NewAstraDB()
+
+	session, err := db.Connect(ctx, astraConfig, 30*time.Second)
+	if err != nil {
+		slog.Error("failed to connect to database", "error", err)
+		os.Exit(1)
+	}
+
+	defer session.Close()
 
 }
