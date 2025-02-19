@@ -3,6 +3,7 @@ package snowflake
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/sony/sonyflake"
@@ -22,6 +23,7 @@ func InitSonyFlake() error {
 		return errors.New("failed to initialize Sonyflake")
 	}
 
+	slog.Info("sonyflake initialized succesfully")
 	return nil
 }
 

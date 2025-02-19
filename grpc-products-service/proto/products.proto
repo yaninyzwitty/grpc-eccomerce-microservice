@@ -14,6 +14,14 @@ service ProductService {
   rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
 }
 
+message OutboxEvent {
+    string bucket = 1;            // Partition key for sharding
+    string id = 2;                // TimeUUID as a string
+    string event_type = 3;        // Type of event
+    string payload = 4;           // JSON or encoded message
+    google.protobuf.Timestamp created_at = 5;  // Timestamp for ordering
+}
+
 message Product {
   int64 id = 1;
   string name = 2;

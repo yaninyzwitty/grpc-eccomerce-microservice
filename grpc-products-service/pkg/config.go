@@ -10,6 +10,7 @@ import (
 type Config struct {
 	Server   Server `yaml:"server"`
 	Database DB     `yaml:"astra"`
+	Queue    Pulsar `yaml:"pulsar"`
 }
 
 type Server struct {
@@ -21,6 +22,11 @@ type DB struct {
 	// Token string 	`yaml:""token`
 	Path    string `yaml:"path"`
 	Timeout int    `yaml:"timeout"`
+}
+
+type Pulsar struct {
+	URI       string `yaml:"uri"`
+	TopicName string `yaml:"topic_name"`
 }
 
 func (c *Config) LoadConfig(file io.Reader) error {
