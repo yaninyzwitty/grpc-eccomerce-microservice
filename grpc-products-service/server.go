@@ -23,8 +23,7 @@ import (
 )
 
 var (
-	cfg     pkg.Config
-	workers = 5
+	cfg pkg.Config
 )
 
 func main() {
@@ -67,8 +66,9 @@ func main() {
 
 	// Pulsar connection
 	pulsarCfg := &queue.PulsarConfig{
-		URI:   cfg.Queue.URI,
-		Token: helpers.GetEnvOrDefault("PULSAR_TOKEN", ""),
+		URI:       cfg.Queue.URI,
+		TopicName: cfg.Queue.TopicName,
+		Token:     helpers.GetEnvOrDefault("PULSAR_TOKEN", ""),
 	}
 	pulsarClient, err := pulsarCfg.CreatePulsarConnection(ctx)
 	if err != nil {
@@ -108,7 +108,7 @@ func main() {
 	// Graceful shutdown handling
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	stopCh := make(chan struct{}) // Define stopCh
+	stopCH := make(chan os.Signal, 1)
 
 	go func() {
 		sig := <-sigChan
@@ -117,16 +117,30 @@ func main() {
 
 		// Gracefully stop the gRPC server
 		server.GracefulStop()
-		close(stopCh) // Signal ticker goroutine to stop
-		cancel()      // Cancel context for other goroutines
+		cancel() // Cancel context for other goroutines
 		slog.Info("gRPC server has been stopped gracefully")
 	}()
 
-	// Background message processing (Fixed: Correctly stops on shutdown)
-	for i := 0; i < workers; i++ {
-		go helpers.ProcessMessages(ctx, session, producer, i, 10)
+	// polling approach
 
-	}
+	go func() {
+		ticker := time.NewTicker(4 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				// poll messages
+				if err := helpers.ProcessMessages(context.Background(), session, producer); err != nil {
+					slog.Error("failed to process messages", "error", err)
+					os.Exit(1)
+				}
+			case <-stopCH:
+				return
+			}
+
+		}
+	}()
 
 	// Start server
 	slog.Info("Starting gRPC server", "port", cfg.Server.Port)
