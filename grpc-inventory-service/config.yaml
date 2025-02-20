@@ -1,0 +1,10 @@
+server:
+  port: 50052
+astra:
+  username: token
+  path: ./secure-connect.zip
+  timeout: 30
+pulsar:
+  uri: pulsar+ssl://pulsar-aws-eucentral1.streaming.datastax.com:6651
+  topic_name: persistent://witty-cluster/default/eccomerce_topic
+  token: some_token
