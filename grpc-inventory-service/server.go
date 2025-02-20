@@ -10,6 +10,8 @@ import (
 	"github.com/yaninyzwitty/grpc-inventory-service/helpers"
 	"github.com/yaninyzwitty/grpc-inventory-service/internal/database"
 	"github.com/yaninyzwitty/grpc-inventory-service/pkg"
+	"github.com/yaninyzwitty/grpc-inventory-service/queue"
+	"github.com/yaninyzwitty/grpc-inventory-service/snowflake"
 )
 
 func main() {
@@ -47,5 +49,30 @@ func main() {
 		os.Exit(1)
 	}
 	defer session.Close() // Close session only after server shutdown
+	pulsarCfg := &queue.PulsarConfig{
+		URI:       cfg.Queue.URI,
+		TopicName: cfg.Queue.TopicName,
+		Token:     helpers.GetEnvOrDefault("PULSAR_TOKEN", ""),
+	}
+	pulsarClient, err := pulsarCfg.CreatePulsarConnection(ctx)
+	if err != nil {
+		slog.Error("failed to create pulsar connection", "error", err)
+		os.Exit(1)
+	}
+	defer pulsarClient.Close()
+
+	producer, err := pulsarCfg.CreatePulsarProducer(ctx, pulsarClient)
+	if err != nil {
+		slog.Error("failed to create pulsar producer", "error", err)
+		os.Exit(1)
+	}
+	defer producer.Close()
+
+	// Initialize Snowflake
+	err = snowflake.InitSonyFlake()
+	if err != nil {
+		slog.Error("failed to initialize snowflake", "error", err)
+		os.Exit(1)
+	}
 
 }
