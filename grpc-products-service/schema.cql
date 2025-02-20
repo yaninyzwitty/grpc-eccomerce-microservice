@@ -17,5 +17,6 @@ CREATE TABLE products_outbox (
     event_type text,
     payload text,
     created_at timestamp,
+    processed BOOLEAN,
     PRIMARY KEY (bucket, id)
 ) WITH CLUSTERING ORDER BY (id ASC);

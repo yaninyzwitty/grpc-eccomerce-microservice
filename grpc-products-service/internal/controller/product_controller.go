@@ -32,8 +32,8 @@ func (c *ProductController) CreateProduct(ctx context.Context, req *pb.CreatePro
 	batch := `BEGIN BATCH
 		INSERT INTO eccomerce_keyspace.products (id, name, description, price, category, tags, stock_count, created_at, updated_at) 
 		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);
-		INSERT INTO eccomerce_keyspace.products_outbox (bucket, id, event_type, payload, created_at) 
-		VALUES(?, ?, ?, ?, ?);
+		INSERT INTO eccomerce_keyspace.products_outbox (bucket, id, event_type, payload, processed, created_at) 
+		VALUES(?, ?, ?, ?, ?, ?);
 	APPLY BATCH;`
 
 	productId, err := snowflake.GenerateID()
@@ -65,7 +65,7 @@ func (c *ProductController) CreateProduct(ctx context.Context, req *pb.CreatePro
 
 	err = c.session.Query(batch,
 		productId, product.Name, product.Description, product.Price, product.Category, product.Tags, product.StockCount, now, now,
-		bucket, outboxId, CREATE_PRODUCT_EVENT, string(payload), now,
+		bucket, outboxId, CREATE_PRODUCT_EVENT, string(payload), false, now,
 	).WithContext(ctx).Exec()
 
 	if err != nil {
