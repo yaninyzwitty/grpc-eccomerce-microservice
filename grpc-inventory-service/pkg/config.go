@@ -25,8 +25,9 @@ type DB struct {
 }
 
 type Pulsar struct {
-	URI       string `yaml:"uri"`
-	TopicName string `yaml:"topic_name"`
+	URI               string `yaml:"uri"`
+	TopicName         string `yaml:"topic_name"`
+	ConsumerTopicName string `yaml:"consumer_topic_name"`
 }
 
 func (c *Config) LoadConfig(file io.Reader) error {

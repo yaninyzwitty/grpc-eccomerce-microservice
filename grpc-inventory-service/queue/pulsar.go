@@ -12,6 +12,7 @@ import (
 type PulsarMethods interface {
 	CreatePulsarConnection(ctx context.Context) (pulsar.Client, error)
 	CreatePulsarProducer(ctx context.Context, client pulsar.Client) (pulsar.Producer, error)
+	CreatePulsarConsumer(ctx context.Context, client pulsar.Client, consumerTopic string) (pulsar.Consumer, error)
 }
 
 // PulsarConfig holds the configuration for the Pulsar connection
@@ -61,4 +62,21 @@ func (c *PulsarConfig) CreatePulsarProducer(ctx context.Context, client pulsar.C
 	slog.Info("Pulsar producer created successfully", "topic", c.TopicName)
 
 	return producer, nil
+}
+
+func (c *PulsarConfig) CreatePulsarConsumer(ctx context.Context, client pulsar.Client, consumerTopic string) (pulsar.Consumer, error) {
+	consumerOptions := pulsar.ConsumerOptions{
+		Topic:                       consumerTopic,
+		SubscriptionName:            "my-subscription",
+		SubscriptionInitialPosition: pulsar.SubscriptionPositionEarliest,
+	}
+
+	consumer, err := client.Subscribe(consumerOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Pulsar consumer: %w", err)
+	}
+
+	slog.Info("Pulsar consumer created successfully", "topic", c.TopicName)
+
+	return consumer, nil
 }

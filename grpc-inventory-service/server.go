@@ -23,8 +23,9 @@ import (
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
 	var cfg pkg.Config
 	file, err := os.Open("config.yaml")
 	if err != nil {
@@ -35,33 +36,31 @@ func main() {
 	if err := cfg.LoadConfig(file); err != nil {
 		slog.Error("failed to load config", "error", err)
 		os.Exit(1)
-
 	}
 
-	// Load .env variables
 	if err := godotenv.Load(); err != nil {
 		slog.Error("failed to load .env file", "error", err)
 		os.Exit(1)
 	}
 
-	astraConfig := &database.AstraConfig{
+	db := database.NewAstraDB()
+	session, err := db.Connect(ctx, &database.AstraConfig{
 		Username: cfg.Database.Username,
 		Path:     cfg.Database.Path,
 		Token:    helpers.GetEnvOrDefault("ASTRA_TOKEN", ""),
-	}
-
-	db := database.NewAstraDB()
-	session, err := db.Connect(ctx, astraConfig, 30*time.Second)
+	}, 30*time.Second)
 	if err != nil {
 		slog.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
-	defer session.Close() // Close session only after server shutdown
+	defer session.Close()
+
 	pulsarCfg := &queue.PulsarConfig{
 		URI:       cfg.Queue.URI,
 		TopicName: cfg.Queue.TopicName,
 		Token:     helpers.GetEnvOrDefault("PULSAR_TOKEN", ""),
 	}
+
 	pulsarClient, err := pulsarCfg.CreatePulsarConnection(ctx)
 	if err != nil {
 		slog.Error("failed to create pulsar connection", "error", err)
@@ -76,14 +75,18 @@ func main() {
 	}
 	defer producer.Close()
 
-	// Initialize Snowflake
-	err = snowflake.InitSonyFlake()
+	consumer, err := pulsarCfg.CreatePulsarConsumer(ctx, pulsarClient, cfg.Queue.ConsumerTopicName)
 	if err != nil {
+		slog.Error("failed to create pulsar consumer", "error", err)
+		os.Exit(1)
+	}
+	defer consumer.Close()
+
+	if err := snowflake.InitSonyFlake(); err != nil {
 		slog.Error("failed to initialize snowflake", "error", err)
 		os.Exit(1)
 	}
 
-	// Start gRPC server
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.Port))
 	if err != nil {
 		slog.Error("failed to listen", "error", err)
@@ -94,47 +97,25 @@ func main() {
 	server := grpc.NewServer()
 	reflection.Register(server)
 	pb.RegisterInventoryServiceServer(server, inventoryController)
-	// Graceful shutdown handling
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	// stopCH := make(chan os.Signal, 1)
 
 	go func() {
 		sig := <-sigChan
 		slog.Info("Received shutdown signal", "signal", sig)
-		slog.Info("Shutting down gRPC server...")
-
-		// Gracefully stop the gRPC server
+		cancel()                    // Cancel context to signal `ConsumeMessages` to stop
+		time.Sleep(2 * time.Second) // Give it time to gracefully shutdown
 		server.GracefulStop()
-		cancel() // Cancel context for other goroutines
 		slog.Info("gRPC server has been stopped gracefully")
 	}()
-	// polling approach
 
-	// go func() {
-	// 	ticker := time.NewTicker(4 * time.Second)
-	// 	defer ticker.Stop()
+	// Start consuming messages
+	go helpers.ConsumeMessages(ctx, consumer, session)
 
-	// 	for {
-	// 		select {
-	// 		case <-ticker.C:
-	// 			// poll messages
-	// 			if err := helpers.ProcessMessages(context.Background(), session, producer); err != nil {
-	// 				slog.Error("failed to process messages", "error", err)
-	// 				os.Exit(1)
-	// 			}
-	// 		case <-stopCH:
-	// 			return
-	// 		}
-
-	// 	}
-	// }()
-
-	// Start server
 	slog.Info("Starting gRPC server", "port", cfg.Server.Port)
 	if err := server.Serve(lis); err != nil {
 		slog.Error("gRPC server encountered an error while serving", "error", err)
 		os.Exit(1)
 	}
-
 }
