@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package inventory;
+
+option go_package = "/pb";
+
+import "google/protobuf/timestamp.proto";
+
+// InventoryService defines the gRPC service for inventory management
+service InventoryService {
+    rpc GetInventory (GetInventoryRequest) returns (GetInventoryResponse);
+    rpc ListInventory (ListInventoryRequest) returns (ListInventoryResponse);
+    rpc UpdateInventory (UpdateInventoryRequest) returns (UpdateInventoryResponse);
+}
+
+// Request message for GetInventory
+message GetInventoryRequest {
+    int64 product_id = 1;
+}
+
+// Response message for GetInventory
+message GetInventoryResponse {
+    int64 product_id = 1;
+    int32 quantity_available = 2;
+    google.protobuf.Timestamp last_updated = 3;
+}
+
+// Request message for listing all inventory items
+message ListInventoryRequest {
+    int32 limit = 1;
+    bytes paging_state = 2; // Cassandra pagination token
+}
+
+// Response message for listing inventory
+message ListInventoryResponse {
+    repeated InventoryItem items = 1;
+    bytes paging_state = 2;
+}
+
+// Inventory item details
+message InventoryItem {
+    int64 product_id = 1;  // Changed to int64 for consistency
+    int32 quantity_available = 2;
+    google.protobuf.Timestamp last_updated = 3;
+}
+
+// Request message for updating inventory
+message UpdateInventoryRequest {
+    int64 product_id = 1;  // Changed to int64 for consistency
+    int32 quantity_change = 2; // Positive for restocking, negative for selling
+}
+
+// Response message for updating inventory
+message UpdateInventoryResponse {
+    int64 product_id = 1;  // Changed to int64 for consistency
+    int32 new_quantity = 2;
+    google.protobuf.Timestamp updated_at = 3;
+}
