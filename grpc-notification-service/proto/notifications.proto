@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option go_package = "/pb";
+
+import "google/protobuf/timestamp.proto";
+
+package notification;
+
+service NotificationService {
+    rpc GetNotification(GetNotificationRequest) returns (GetNotificationResponse);
+}
+
+message GetNotificationRequest {
+    int64 notification_id = 1; 
+}
+
+message GetNotificationResponse {
+    int64 notification_id = 1; 
+    string title = 2;          
+    string message = 3;         
+    google.protobuf.Timestamp created_at = 4; 
+    bool is_read = 5;        
+}
